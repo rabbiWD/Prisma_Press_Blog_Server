@@ -8,6 +8,8 @@ model Post {
   views      Int        @default(0)
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
+  isPremium Boolean @default(false)
+
   authorId   String
   thumbnail  String?
   comments   Comment[]
