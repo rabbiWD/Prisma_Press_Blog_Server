@@ -1,10 +1,11 @@
 import { prisma } from "../../lib/prisma";
-import { ICreatePostPayload, IPostQuery, IUpdatePostPayload } from "./post.interface";
-import { auth } from "./../../middlewares/auth";
+import {
+  ICreatePostPayload,
+  IPostQuery,
+  IUpdatePostPayload,
+} from "./post.interface";
 import { CommentStatus, PostStatus } from "../../../generated/prisma/enums";
-import { title } from 'node:process';
 import { PostWhereInput } from "../../../generated/prisma/models";
-
 
 const createPost = async (payload: ICreatePostPayload, userId: string) => {
   const result = await prisma.post.create({
@@ -18,75 +19,73 @@ const createPost = async (payload: ICreatePostPayload, userId: string) => {
 };
 
 const getAllPosts = async (query: IPostQuery) => {
-    const limit = query.limit ? Number(query.limit ): 10;
-    const page = query.page ? Number(query.page):1;
-    const skip = (page-1) * limit
-    const sortBy = query.sortBy ? query.sortBy : "createdAt";
-    const sortOrder = query.sortOrder ? query.sortOrder : "desc";
-    const tags = query.tags ? JSON.parse(query.tags as string) : null
-    const tagsArray = Array.isArray(tags) ? tags : []
-    console.log("tagsArray", tagsArray)
+  const limit = query.limit ? Number(query.limit) : 10;
+  const page = query.page ? Number(query.page) : 1;
+  const skip = (page - 1) * limit;
+  const sortBy = query.sortBy ? query.sortBy : "createdAt";
+  const sortOrder = query.sortOrder ? query.sortOrder : "desc";
+  const tags = query.tags ? JSON.parse(query.tags as string) : null;
+  const tagsArray = Array.isArray(tags) ? tags : [];
+  console.log("tagsArray", tagsArray);
 
-    const andConditions: PostWhereInput[] = []
+  const andConditions: PostWhereInput[] = [];
 
-    if(query.searchTerm){
-      andConditions.push({
-        OR:[
-           {
-                        title: {
-                            contains: query.searchTerm,
-                            mode: "insensitive"
-                        },
-                    },
-                    {
-                         content: {
-                            contains: query.searchTerm,
-                            mode: "insensitive"
-                        }
-                    }
-        ]
-      })
-    }
+  if (query.searchTerm) {
+    andConditions.push({
+      OR: [
+        {
+          title: {
+            contains: query.searchTerm,
+            mode: "insensitive",
+          },
+        },
+        {
+          content: {
+            contains: query.searchTerm,
+            mode: "insensitive",
+          },
+        },
+      ],
+    });
+  }
 
-    if(query.title){
-      andConditions.push({
-        title: query.title
-    })
-    }
+  if (query.title) {
+    andConditions.push({
+      title: query.title,
+    });
+  }
 
-    if(query.content){
-      andConditions.push({
-        content: query.content
-      })
-    }
+  if (query.content) {
+    andConditions.push({
+      content: query.content,
+    });
+  }
 
-    if(query.authorId){
-      andConditions.push({
-        authorId: query.authorId
-      })
-    }
+  if (query.authorId) {
+    andConditions.push({
+      authorId: query.authorId,
+    });
+  }
 
-    if(query.isFeatured){
-      andConditions.push({
-        isFeatured: Boolean(query.isFeatured)
-      })
-    }
+  if (query.isFeatured) {
+    andConditions.push({
+      isFeatured: Boolean(query.isFeatured),
+    });
+  }
 
-    if(query.tags){
-      andConditions.push({
-        tags:{   
-             hasSome: tagsArray
-                  
-            }
-      })
-    }
+  if (query.tags) {
+    andConditions.push({
+      tags: {
+        hasSome: tagsArray,
+      },
+    });
+  }
 
-    if(query.status){
-      andConditions.push({
-        status: query.status
-      })
-    }
-
+  if (query.status) {
+    andConditions.push({
+      status: query.status,
+    });
+  }
 
   const posts = await prisma.post.findMany({
     //// filtering / exact match without AND operations
@@ -118,10 +117,10 @@ const getAllPosts = async (query: IPostQuery) => {
     //         contains: "ronaldo",
     //         mode: "insensitive"
     //     },
-        // not ideal for partial match
-        // content: {
-        //     contains: "Ronaldo"
-        // }
+    // not ideal for partial match
+    // content: {
+    //     contains: "Ronaldo"
+    // }
     // },
 
     // searching/ partial search with OR oeration
@@ -164,7 +163,7 @@ const getAllPosts = async (query: IPostQuery) => {
     //                         contains: "Ron",
     //                         mode: "insensitive"
     //                     }
-                        
+
     //                 }
     //             ]
     //         },
@@ -191,7 +190,6 @@ const getAllPosts = async (query: IPostQuery) => {
     // page=4 limit /take =1 => skip:(page-1* limit =>
     // page = 3, limit / take = 10 => skip: (page-1)* limit = (3-1)*10=20
 
-
     // sort by
     // orderBy:{
     //     createdAt: "desc",
@@ -199,7 +197,6 @@ const getAllPosts = async (query: IPostQuery) => {
     //     content: "desc"
     //     // fieldName: asc/desc
     // },
-
 
     // dynamic searching, filetering
     // where:{
@@ -234,25 +231,23 @@ const getAllPosts = async (query: IPostQuery) => {
     //             //     hasSome: [""]
     //             //   }
     //             // }
-            
+
     //     ]
     // },
 
     // dynamic pagination, filtering
-   
+
     where: {
-      AND: andConditions
+      AND: andConditions,
     },
 
-
-    take:limit,
+    take: limit,
     skip: skip,
 
     orderBy: {
-        // sortBy : sortOrder
-        [sortBy] : sortOrder
+      // sortBy : sortOrder
+      [sortBy]: sortOrder,
     },
-
 
     include: {
       author: {
