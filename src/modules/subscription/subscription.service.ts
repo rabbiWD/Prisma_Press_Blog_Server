@@ -1,6 +1,11 @@
+import Stripe from "stripe";
 import config from "../../config"
 import { prisma } from "../../lib/prisma"
 import { stripe } from "../../lib/stripe"
+import { SubscriptionStatus } from "../../../generated/prisma/enums";
+import { log } from "node:console";
+import { handleChangeSubscription, handleCheckoutCompleted } from "./subscription.utils";
+// import { stripe } from './../../lib/stripe';
 
 
 const createCheckoutSession = async (userId: string) =>{
@@ -47,8 +52,76 @@ const createCheckoutSession = async (userId: string) =>{
     return {
         paymentUrl: transactionResult
     }
+};
+
+const handleWebhook = async(payload: Buffer, signature: string)=>{
+    const endpointSecret = config.stripe_webhook_secret;
+
+   const event = stripe.webhooks.constructEvent(
+        payload,
+        signature,
+        endpointSecret
+      );
+
+       // Handle the event
+  switch (event.type) {
+    case 'checkout.session.completed':
+        // console.log(event.data.object);
+       await handleCheckoutCompleted(event.data.object)
+
+        // Occurs when a Checkout Session has been successfully completed.
+     
+      break;
+
+    case 'customer.subscription.updated':
+        // Occurs whenever a subscription changes (e.g., switching from one plan to another, or changing the status from trial to active).
+
+        await handleChangeSubscription(event.data.object)
+
+        // To test this run this command in terminal 
+        // stripe subscription cancel sub_1psYourSubIdHere
+        //  (paste existing subscribed sub id)
+      
+      break;
+
+      case 'customer.subscription.deleted':
+        // Occurs whenever a customer’s subscription ends.
+        await handleChangeSubscription(event.data.object)
+
+         // To test this run this command in terminal 
+        // stripe subscription cancel sub_1psYourSubIdHere
+        //  (paste existing subscribed sub id)
+      
+
+      break
+
+    default:
+      // Unexpected event type
+      console.log(`No event matched. Unhandled event type ${event.type}.`);
+      break;
+  }
 }
+
+const getSubscriptionStatus = async (userId : string) => {
+    const isSubscriptionExist = await prisma.subscription.findUniqueOrThrow({
+        where : {
+            userId
+        }
+    });
+
+    const isActive = isSubscriptionExist.status === "ACTIVE" && isSubscriptionExist.currentPeriodEnd && new Date(isSubscriptionExist.currentPeriodEnd) > new Date();
+
+    return {
+        status : isSubscriptionExist.status,
+        isSubscribed : isActive,
+        currentPeriodEnd : isSubscriptionExist.currentPeriodEnd
+    }
+}
+
+
 
 export const subscriptionService = {
     createCheckoutSession,
+    handleWebhook,
+    getSubscriptionStatus
 }
